@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MNIST DT Evaluation</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #333;
+            color: #fff;
+            margin: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-right: 400px; /* Adjusted margin to fit log viewer */
+        }
+        .canvas-container {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(28, 20px);
+            grid-template-rows: repeat(28, 20px);
+            gap: 1px;
+        }
+        .pixel {
+            width: 20px;
+            height: 20px;
+            background-color: black;
+        }
+        .pixel.white {
+            background-color: white;
+        }
+        .pixel.green {
+            background-color: green;
+        }
+        .pixel.red {
+            background-color: red;
+        }
+        .button-panel {
+            display: flex;
+            flex-direction: column;
+            margin-left: 20px;
+        }
+        button {
+            margin: 5px 0;
+            padding: 10px;
+            background-color: #555;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #777;
+        }
+        .selected-button {
+            background-color: #ff5722 !important;
+            color: #fff !important;
+        }
+        .button-row {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .button-row button {
+            margin: 0 10px;
+            padding: 10px 20px;
+            background-color: #ff5722;
+        }
+        .tree-info {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .result-box {
+            margin-top: 20px;
+            padding: 10px;
+            border: 2px solid #ff5722;
+            background-color: #444;
+            color: #fff;
+            text-align: center;
+            width: 300px;
+            border-radius: 8px;
+        }
+        .evaluation-menu {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border: 2px solid #ff5722;
+            background-color: #444;
+            color: #fff;
+            width: 640px; /* Adjusted width */
+            border-radius: 8px;
+            z-index: 1000;
+            overflow: auto; /* Added to allow scrolling if necessary */
+        }
+        .evaluation-menu h3 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .evaluation-menu .close-btn, .info-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff0000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 50%;
+        }
+        .evaluation-menu .info-btn {
+            right: 50px;
+            background-color: #4CAF50;
+        }
+        .info-window {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border: 2px solid #ff5722;
+            background-color: #444;
+            color: #fff;
+            width: 500px;
+            border-radius: 8px;
+            z-index: 1100;
+            overflow: auto;
+        }
+        .info-window .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #ff0000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 50%;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        .evaluation-grid {
+            display: grid;
+            grid-template-columns: repeat(28, 20px);
+            grid-template-rows: repeat(28, 20px);
+            gap: 1px;
+            justify-content: center;
+        }
+        .evaluation-pixel {
+            width: 20px;
+            height: 20px;
+            background-color: black;
+        }
+        .evaluation-pixel.white {
+            background-color: white;
+        }
+        .evaluation-pixel.green {
+            background-color: green;
+        }
+        .evaluation-pixel.red {
+            background-color: red;
+        }
+        .evaluation-button {
+            margin-top: 20px; /* Added margin to create more space */
+        }
+        .evaluation-controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .evaluation-controls button {
+            padding: 10px;
+            background-color: #555;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            width: 100px;
+        }
+        .evaluation-controls button:hover {
+            background-color: #777;
+        }
+        .log-container {
+            position: fixed;
+            top: 0; /* Adjusted top position */
+            right: 10px;
+            width: 400px;
+            height: 90vh; /* Adjusted height */
+            overflow-y: auto;
+            padding: 10px;
+            border: 2px solid #ff5722;
+            background-color: #444;
+            color: #fff;
+            z-index: 1000;
+            border-radius: 8px;
+        }
+        .log-container h3 {
+            position: sticky;
+            top: -10px; /* Adjusted top to be higher */
+            background-color: #444;
+            margin: 0;
+            padding: 10px 0;
+            text-align: center;
+            z-index: 1001; /* Ensures it stays above other content */
+        }
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        .footer-right {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            font-size: 14px;
+            color: #aaa;
+        }
+        h1 {
+            margin: 20px 0;
+            font-size: 36px; /* Increased font size */
+        }
+    </style>
+</head>
+<body>
+<h1>Interactive Decision Tree Evaluation over MNIST Dataset</h1>
+<div class="container">
+    <div class="tree-info" id="treeInfo">PICKED DECISION TREE FOR DIGIT: NONE</div>
+    <div class="canvas-container">
+        <div id="drawingPanel" class="grid"></div>
+        <div class="button-panel">
+            <button onclick="selectTree(0)">Tree 0</button>
+            <button onclick="selectTree(1)">Tree 1</button>
+            <button onclick="selectTree(2)">Tree 2</button>
+            <button onclick="selectTree(3)">Tree 3</button>
+            <button onclick="selectTree(4)">Tree 4</button>
+            <button onclick="selectTree(5)">Tree 5</button>
+            <button onclick="selectTree(6)">Tree 6</button>
+            <button onclick="selectTree(7)">Tree 7</button>
+            <button onclick="selectTree(8)">Tree 8</button>
+            <button onclick="selectTree(9)">Tree 9</button>
+        </div>
+    </div>
+    <div class="button-row">
+        <button class="classify-button" onclick="classify()">Classify!</button>
+        <button class="vector-button" onclick="showVector()">Show Vector</button>
+        <button class="clear-button" onclick="clearDrawing()">Clear</button>
+    </div>
+    <div id="result" class="result-box"></div>
+    <button class="evaluation-button" onclick="openEvaluationMenu()">Open Evaluation Menu</button>
+    <div class="overlay" id="overlay"></div>
+    <div id="evaluationMenu" class="evaluation-menu">
+        <button class="close-btn" onclick="closeEvaluationMenu()">X</button>
+        <button class="info-btn" onclick="openInfoWindow()">?</button>
+        <div class="evaluation-content">
+            <div>
+                <h3>Current Drawing</h3>
+                <div id="evaluationDrawing" class="evaluation-grid"></div>
+                <div id="evaluationResult" class="result-box" style="margin-top: 10px; text-align: center;"></div>
+            </div>
+            <div class="evaluation-controls">
+                <button onclick="minimumSR()">SR</button>
+                <button onclick="minimalRFS()">MinimalRFS</button>
+                <button onclick="minimumCR()">MinimumCR</button>
+                <button>Coming Soon</button>
+            </div>
+        </div>
+    </div>
+    <div id="infoWindow" class="info-window">
+        <button class="close-btn" onclick="closeInfoWindow()">X</button>
+        <div>
+            <h3>Feature Explanation</h3>
+            <p><strong>SR:</strong> Finds a minimum subset of pixels which if fixed, ensures the same classification regardless of the rest.</p>
+            <p><strong>MinimalRFS:</strong> Highlights the relevant features (pixels) used by the decision tree to classify the current drawing.</p>
+            <p><strong>MinimumCR:</strong> Finds the smallest number of pixels that need to be changed to flip the classification of the current drawing.</p>
+            <p><strong>Green Pixels:</strong> Pixels that were marked in the original drawing and are relevant.</p>
+            <p><strong>Red Pixels:</strong> Pixels that were not marked in the original drawing but are relevant.</p>
+        </div>
+    </div>
+</div>
+<div class="log-container" id="logContainer">
+    <h3>Console Logs</h3>
+    <div id="logContent"></div>
+</div>
+<div class="footer">by Bünyamin Dincer</div>
+<div class="footer-right">Version 1.2 Alpha</div>
+<script>
+    const drawingPanel = document.getElementById('drawingPanel');
+    const treeInfo = document.getElementById('treeInfo');
+    const resultBox = document.getElementById('result');
+    const evaluationMenu = document.getElementById('evaluationMenu');
+    const evaluationDrawing = document.getElementById('evaluationDrawing');
+    const evaluationResult = document.getElementById('evaluationResult');
+    const overlay = document.getElementById('overlay');
+    const logContainer = document.getElementById('logContainer');
+    const logContent = document.getElementById('logContent');
+    const infoWindow = document.getElementById('infoWindow');
+    let currentTree = -1;
+    let isDrawing = false;
+    let lastClassificationResult = '';
+    let currentTreeData = null;
+    let selectedButton = null;
+
+    function createPixel() {
+        const pixel = document.createElement('div');
+        pixel.classList.add('pixel');
+        pixel.addEventListener('mousedown', () => {
+            isDrawing = true;
+            pixel.classList.add('white');
+        });
+        pixel.addEventListener('mouseover', () => {
+            if (isDrawing) {
+                pixel.classList.add('white');
+            }
+        });
+        return pixel;
+    }
+
+    for (let i = 0; i < 28 * 28; i++) {
+        drawingPanel.appendChild(createPixel());
+    }
+
+    drawingPanel.addEventListener('mousedown', () => {
+        isDrawing = true;
+    });
+
+    drawingPanel.addEventListener('mouseup', () => {
+        isDrawing = false;
+    });
+
+    document.addEventListener('mouseup', () => {
+        isDrawing = false;
+    });
+
+    function logMessage(message) {
+        const logEntry = document.createElement('div');
+        logEntry.innerText = message;
+        logContent.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function selectTree(treeNumber) {
+        if (selectedButton) {
+            selectedButton.classList.remove('selected-button');
+        }
+        selectedButton = event.target;
+        selectedButton.classList.add('selected-button');
+
+        currentTree = treeNumber;
+        treeInfo.innerText = `PICKED DECISION TREE FOR DIGIT: ${treeNumber}`;
+        logMessage(`Selected Tree: ${currentTree}`);
+        
+        // Load the tree JSON file
+        fetch(`mnist_d${currentTree}_n500_0.json`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(treeData => {
+                logMessage('Loaded Tree Data');
+                currentTreeData = treeData;
+            })
+            .catch(error => {
+                logMessage(`Error fetching the decision tree: ${error}`);
+            });
+    }
+
+    function classify() {
+        if (currentTree === -1) {
+            alert("Please select a decision tree first.");
+            return;
+        }
+
+        if (!currentTreeData) {
+            alert("Decision tree data not loaded yet. Please try again.");
+            return;
+        }
+
+        const binaryImage = getBinaryImage();
+        const result = evaluateTree(currentTreeData, binaryImage);
+        resultBox.innerText = `Classification Result: ${result}`;
+        lastClassificationResult = result;
+    }
+
+    function getBinaryImage() {
+        const pixels = document.querySelectorAll('.pixel');
+        const binaryImage = [];
+        pixels.forEach(pixel => {
+            binaryImage.push(pixel.classList.contains('white') ? 1 : 0);
+        });
+        return binaryImage;
+    }
+
+    function showVector() {
+        const binaryImage = getBinaryImage();
+        let formattedVector = "";
+        for (let i = 0; i < binaryImage.length; i += 28) {
+            formattedVector += binaryImage.slice(i, i + 28).join(", ") + (i + 28 < binaryImage.length ? ",\n" : "\n");
+        }
+        const vectorWindow = window.open("", "Binary Vector", "width=600,height=400");
+        vectorWindow.document.write(`<pre>${formattedVector}</pre>`);
+        vectorWindow.document.close();
+    }
+
+    function clearDrawing() {
+        const pixels = document.querySelectorAll('.pixel');
+        pixels.forEach(pixel => {
+            pixel.classList.remove('white');
+            pixel.classList.remove('green');
+            pixel.classList.remove('red');
+        });
+    }
+
+    function openEvaluationMenu() {
+        if (currentTree === -1) {
+            alert("Please select a decision tree first.");
+            return;
+        }
+
+        if (!lastClassificationResult) {
+            alert("Please classify the drawing first.");
+            return;
+        }
+
+        // Copy the current drawing to the evaluation menu
+        evaluationDrawing.innerHTML = '';
+        const pixels = document.querySelectorAll('#drawingPanel .pixel');
+        pixels.forEach(pixel => {
+            const evalPixel = document.createElement('div');
+            evalPixel.classList.add('evaluation-pixel');
+            if (pixel.classList.contains('white')) {
+                evalPixel.classList.add('white');
+            }
+            evaluationDrawing.appendChild(evalPixel);
+        });
+
+        // Show the classification result in the evaluation menu
+        evaluationResult.innerText = `Classification Result: ${lastClassificationResult}`;
+
+        // Show the evaluation menu and overlay
+        overlay.style.display = 'block';
+        evaluationMenu.style.display = 'block';
+    }
+
+    function closeEvaluationMenu() {
+        // Hide the evaluation menu and overlay
+        evaluationMenu.style.display = 'none';
+        overlay.style.display = 'none';
+    }
+
+    function openInfoWindow() {
+        infoWindow.style.display = 'block';
+    }
+
+    function closeInfoWindow() {
+        infoWindow.style.display = 'none';
+    }
+
+    function evaluateTree(tree, image) {
+        let node = tree.nodes["0"];
+        logMessage('Starting tree evaluation');
+        while (node.type !== 'leaf') {
+            const pixelIndex = node.feature_index;
+            const pixelValue = image[pixelIndex];
+            logMessage(`Node ${node.id}, Feature: ${node.feature_name}, Pixel Value: ${pixelValue}`);
+            if (pixelValue === 0) { // Treating 0 as not white
+                logMessage(`Going to left child: ${node.id_left}`);
+                node = tree.nodes[node.id_left.toString()];
+            } else { // Treating 1 as white
+                logMessage(`Going to right child: ${node.id_right}`);
+                node = tree.nodes[node.id_right.toString()];
+            }
+        }
+        logMessage(`Reached leaf node: ${node.class}`);
+        return node.class;
+    }
+
+    function minimumSR() {
+        clearHighlights();
+        if (!currentTreeData) {
+            alert("Decision tree data not loaded yet. Please try again.");
+            return;
+        }
+
+        logMessage('Starting minimumSR computation');
+        const binaryImage = getBinaryImage();
+        const minimumSRFeatures = findMinimumSRFeatures(currentTreeData, binaryImage);
+        logMessage('Minimum SR Features: ' + minimumSRFeatures);
+        highlightRelevantFeatures(minimumSRFeatures, binaryImage);
+        logMessage('Completed minimumSR computation');
+    }
+
+    function findMinimumSRFeatures(tree, image) {
+        const originalResult = evaluateTree(tree, image);
+        const relevantFeatures = findRelevantFeatures(tree, image);
+        const minimumSRFeatures = [];
+
+        for (let i = 0; i < relevantFeatures.length; i++) {
+            const testImage = [...image];
+            testImage[relevantFeatures[i]] = 1 - testImage[relevantFeatures[i]]; // Flip the pixel
+            const newResult = evaluateTree(tree, testImage);
+            if (newResult === originalResult) {
+                minimumSRFeatures.push(relevantFeatures[i]);
+            }
+        }
+
+        const finalMinimumSRFeatures = minimumSRFeatures.filter(index => {
+            const testImage = [...image];
+            minimumSRFeatures.forEach(feature => {
+                if (feature !== index) {
+                    testImage[feature] = 1 - testImage[feature];
+                }
+            });
+            const result = evaluateTree(tree, testImage);
+            return result === originalResult;
+        });
+
+        // Ensure at least one green pixel for negative instances
+        if (originalResult.startsWith('not')) {
+            const greenPixel = relevantFeatures.find(index => image[index] === 1);
+            if (greenPixel !== undefined && !finalMinimumSRFeatures.includes(greenPixel)) {
+                finalMinimumSRFeatures.push(greenPixel);
+            }
+        }
+
+        return finalMinimumSRFeatures;
+    }
+
+    function minimalRFS() {
+        clearHighlights();
+        if (!currentTreeData) {
+            alert("Decision tree data not loaded yet. Please try again.");
+            return;
+        }
+
+        logMessage('Starting minimalRFS computation');
+        const binaryImage = getBinaryImage();
+        const relevantFeatures = findRelevantFeatures(currentTreeData, binaryImage);
+        logMessage('Relevant Features: ' + relevantFeatures);
+        highlightRelevantFeatures(relevantFeatures, binaryImage);
+        logMessage('Completed minimalRFS computation');
+    }
+
+    function findRelevantFeatures(tree, image) {
+        let node = tree.nodes["0"];
+        let relevantFeatures = [];
+        while (node.type !== 'leaf') {
+            const pixelIndex = node.feature_index;
+            relevantFeatures.push(pixelIndex); // Track the relevant feature
+            const pixelValue = image[pixelIndex];
+            logMessage(`Checking node ${node.id} with feature index ${pixelIndex}, Pixel Value: ${pixelValue}`);
+            if (pixelValue === 0) { // Treating 0 as not white
+                node = tree.nodes[node.id_left.toString()];
+            } else { // Treating 1 as white
+                node = tree.nodes[node.id_right.toString()];
+            }
+        }
+        return relevantFeatures;
+    }
+
+    function highlightRelevantFeatures(features, binaryImage) {
+        logMessage(`Highlighting features: ${features}`);
+        const pixels = document.querySelectorAll('#evaluationDrawing .evaluation-pixel');
+        features.forEach(index => {
+            logMessage(`Highlighting pixel index: ${index}`);
+            const pixel = pixels[index];
+            if (binaryImage[index] === 1) {
+                pixel.classList.add('green');
+            } else {
+                pixel.classList.add('red');
+            }
+        });
+    }
+
+    async function minimumCR() {
+        clearHighlights();
+        if (!currentTreeData) {
+            alert("Decision tree data not loaded yet. Please try again.");
+            return;
+        }
+
+        const binaryImage = getBinaryImage();
+        
+        const result = await findChangesToFlipClassification(currentTreeData, binaryImage);
+        if (result) {
+            logMessage('Result changes: ' + result.changes);
+            highlightChanges(result.changes);
+        } else {
+            logMessage('No changes found.');
+        }
+    }
+
+    async function findChangesToFlipClassification(tree, image) {
+        const originalResult = evaluateTree(tree, image);
+        logMessage('Original result: ' + originalResult);
+
+        for (let i = 0; i < image.length; i++) {
+            const newImage = [...image];
+            newImage[i] = newImage[i] === 0 ? 1 : 0;
+            const newResult = evaluateTree(tree, newImage);
+            logMessage(`Testing change at pixel ${i}, new result: ${newResult}`);
+            if (newResult !== originalResult) {
+                logMessage('Change found at pixel: ' + i);
+                return { changes: [i] };
+            }
+        }
+        return null; // No changes found
+    }
+
+    function highlightChanges(changes) {
+        logMessage('Highlighting changes: ' + changes);
+        const pixels = document.querySelectorAll('#evaluationDrawing .evaluation-pixel');
+        changes.forEach(index => {
+            const pixel = pixels[index];
+            if (pixel.classList.contains('white')) {
+                pixel.classList.add('red');
+            } else {
+                pixel.classList.add('green');
+            }
+        });
+    }
+
+    function clearHighlights() {
+        const pixels = document.querySelectorAll('.evaluation-pixel');
+        pixels.forEach(pixel => {
+            pixel.classList.remove('green');
+            pixel.classList.remove('red');
+        });
+    }
+</script>
+</body>
+</html>
