@@ -263,6 +263,30 @@
             margin: 10px;
             border-radius: 8px;
         }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%; /* Position the tooltip above the text */
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -272,7 +296,10 @@
     <div class="canvas-container">
         <div id="drawingPanel" class="grid"></div>
         <div class="button-panel">
-            <button onclick="selectTree(0)">Tree 0</button>
+            <div class="tooltip">
+                <button onclick="selectTree(0)">Tree 0</button>
+                <span class="tooltiptext">Most powerful model (long runtimes)</span>
+            </div>
             <button onclick="selectTree(1)">Tree 1</button>
             <button onclick="selectTree(2)">Tree 2</button>
             <button onclick="selectTree(3)">Tree 3</button>
