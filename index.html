@@ -374,20 +374,29 @@
     const initialPopup = document.getElementById('initialPopup');
     let currentTree = -1;
     let isDrawing = false;
+    let isErasing = false;
     let lastClassificationResult = '';
     let currentTreeData = null;
     let selectedButton = null;
+    let classificationTimes = [];
 
     function createPixel() {
         const pixel = document.createElement('div');
         pixel.classList.add('pixel');
-        pixel.addEventListener('mousedown', () => {
-            isDrawing = true;
-            pixel.classList.add('white');
+        pixel.addEventListener('mousedown', (e) => {
+            if (e.button === 0) { // Left click
+                isDrawing = true;
+                pixel.classList.add('white');
+            } else if (e.button === 2) { // Right click
+                isErasing = true;
+                pixel.classList.remove('white');
+            }
         });
         pixel.addEventListener('mouseover', () => {
             if (isDrawing) {
                 pixel.classList.add('white');
+            } else if (isErasing) {
+                pixel.classList.remove('white');
             }
         });
         return pixel;
@@ -397,21 +406,35 @@
         drawingPanel.appendChild(createPixel());
     }
 
-    drawingPanel.addEventListener('mousedown', () => {
-        isDrawing = true;
+    drawingPanel.addEventListener('mousedown', (e) => {
+        if (e.button === 0) { // Left click
+            isDrawing = true;
+        } else if (e.button === 2) { // Right click
+            isErasing = true;
+        }
     });
 
     drawingPanel.addEventListener('mouseup', () => {
         isDrawing = false;
+        isErasing = false;
     });
 
     document.addEventListener('mouseup', () => {
         isDrawing = false;
+        isErasing = false;
     });
 
-    function logMessage(message) {
+    // Prevent the context menu from appearing on right click
+    drawingPanel.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
+    function logMessage(message, highlight = false) {
         const logEntry = document.createElement('div');
         logEntry.innerText = message;
+        if (highlight) {
+            logEntry.style.color = 'orange';
+        }
         logContent.appendChild(logEntry);
         logContainer.scrollTop = logContainer.scrollHeight;
     }
@@ -438,11 +461,10 @@
             6: 'https://gist.githubusercontent.com/bunidin/8eaf2d4fea062f782e4d00f1c06cd1e0/raw/97da4eb5f56a29e779bf61186e18df101016a792/gistfile1.txt',
             7: 'https://gist.githubusercontent.com/bunidin/89c8b96a80797432b60351fdabf56ea2/raw/6684d6955e743fa3e497d1d3afeab84e7d5fbc4d/mnist_d7_n500_0.json',
             8: 'https://gist.githubusercontent.com/bunidin/8f91b8e2325158d598f0f60f61ca9a5b/raw/88886334e3ad284ca2fbbfe5684ce2267770d76a/gistfile1.txt',
-            9: 'https://gist.githubusercontent.com/bunidin/c4e6f09ca1767422d4379c6150ef5166/raw/d6324f7aec0bb03dbda8dc8c6244eb382b0ea0de/mnist_d9_n500_0.json'
+            9: 'https://gist.githubusercontent.com/bunidin/c4e6f09ca1767422d4379c6150ef5166/raw/d6324f7aec0bb03dbda8dc8c6244eb382b0ea0de/mnist_d9_n500_0.json',
         };
-
+        
         const url = gistUrls[currentTree];
-
         fetch(url)
             .then(response => {
                 if (!response.ok) {
@@ -471,9 +493,23 @@
         }
 
         const binaryImage = getBinaryImage();
+        const startTime = performance.now();
         const result = evaluateTree(currentTreeData, binaryImage);
+        const endTime = performance.now();
+        const timeTaken = endTime - startTime;
+
+        classificationTimes.push(timeTaken);
+        const averageTime = classificationTimes.reduce((a, b) => a + b, 0) / classificationTimes.length;
+
         resultBox.innerText = `Classification Result: ${result}`;
         lastClassificationResult = result;
+
+        logMessage(`Classification Result: ${result}`, true);
+        logMessage(`Time taken for classification: ${timeTaken.toFixed(2)} ms`, true);
+        logMessage(`Average time taken for classification: ${averageTime.toFixed(2)} ms`, true);
+
+        const confidenceLevel = calculateConfidenceLevel(currentTreeData, result);
+        logMessage(`Confidence Level: ${confidenceLevel}`, true);
     }
 
     function getBinaryImage() {
@@ -577,7 +613,15 @@
         return node.class;
     }
 
-    function minimumSR() {
+    function calculateConfidenceLevel(tree, result) {
+        const leafNode = Object.values(tree.nodes).find(node => node.type === 'leaf' && node.class === result);
+        if (!leafNode || !leafNode.class_probability) {
+            return 'Unknown';
+        }
+        return (leafNode.class_probability * 100).toFixed(2) + '%';
+    }
+
+    async function minimumSR() {
         clearHighlights();
         if (!currentTreeData) {
             alert("Decision tree data not loaded yet. Please try again.");
@@ -586,10 +630,14 @@
 
         logMessage('Starting minimumSR computation');
         const binaryImage = getBinaryImage();
+        const startTime = performance.now();
         const minimumSRFeatures = findMinimumSRFeatures(currentTreeData, binaryImage);
-        logMessage('Minimum SR Features: ' + minimumSRFeatures);
+        const endTime = performance.now();
+        const timeTaken = endTime - startTime;
+        logMessage(`Minimum SR Features: ${minimumSRFeatures}`);
         highlightRelevantFeatures(minimumSRFeatures, binaryImage);
         logMessage('Completed minimumSR computation');
+        logMessage(`Time taken for SR computation: ${timeTaken.toFixed(2)} ms`, true);
     }
 
     function findMinimumSRFeatures(tree, image) {
@@ -628,7 +676,7 @@
         return finalMinimumSRFeatures;
     }
 
-    function minimalRFS() {
+    async function minimalRFS() {
         clearHighlights();
         if (!currentTreeData) {
             alert("Decision tree data not loaded yet. Please try again.");
@@ -637,10 +685,14 @@
 
         logMessage('Starting minimalRFS computation');
         const binaryImage = getBinaryImage();
+        const startTime = performance.now();
         const relevantFeatures = findRelevantFeatures(currentTreeData, binaryImage);
+        const endTime = performance.now();
+        const timeTaken = endTime - startTime;
         logMessage('Relevant Features: ' + relevantFeatures);
         highlightRelevantFeatures(relevantFeatures, binaryImage);
         logMessage('Completed minimalRFS computation');
+        logMessage(`Time taken for RFS computation: ${timeTaken.toFixed(2)} ms`, true);
     }
 
     function findRelevantFeatures(tree, image) {
@@ -660,20 +712,6 @@
         return relevantFeatures;
     }
 
-    function highlightRelevantFeatures(features, binaryImage) {
-        logMessage(`Highlighting features: ${features}`);
-        const pixels = document.querySelectorAll('#evaluationDrawing .evaluation-pixel');
-        features.forEach(index => {
-            logMessage(`Highlighting pixel index: ${index}`);
-            const pixel = pixels[index];
-            if (binaryImage[index] === 1) {
-                pixel.classList.add('green');
-            } else {
-                pixel.classList.add('red');
-            }
-        });
-    }
-
     async function minimumCR() {
         clearHighlights();
         if (!currentTreeData) {
@@ -681,15 +719,20 @@
             return;
         }
 
+        logMessage('Starting minimumCR computation');
         const binaryImage = getBinaryImage();
-        
+        const startTime = performance.now();
         const result = await findChangesToFlipClassification(currentTreeData, binaryImage);
+        const endTime = performance.now();
+        const timeTaken = endTime - startTime;
         if (result) {
             logMessage('Result changes: ' + result.changes);
             highlightChanges(result.changes);
         } else {
             logMessage('No changes found.');
         }
+        logMessage('Completed minimumCR computation');
+        logMessage(`Time taken for CR computation: ${timeTaken.toFixed(2)} ms`, true);
     }
 
     async function findChangesToFlipClassification(tree, image) {
@@ -709,6 +752,20 @@
         return null; // No changes found
     }
 
+    function highlightRelevantFeatures(features, binaryImage) {
+        logMessage(`Highlighting features: ${features}`);
+        const pixels = document.querySelectorAll('#evaluationDrawing .evaluation-pixel');
+        features.forEach(index => {
+            logMessage(`Highlighting pixel index: ${index}`);
+            const pixel = pixels[index];
+            if (binaryImage[index] === 1) {
+                pixel.classList.add('green');
+            } else {
+                pixel.classList.add('red');
+            }
+        });
+    }
+
     function highlightChanges(changes) {
         logMessage('Highlighting changes: ' + changes);
         const pixels = document.querySelectorAll('#evaluationDrawing .evaluation-pixel');
@@ -723,17 +780,16 @@
     }
 
     function clearHighlights() {
-        const pixels = document.querySelectorAll('.evaluation-pixel');
+        const pixels = document.querySelectorAll('#evaluationDrawing .evaluation-pixel');
         pixels.forEach(pixel => {
             pixel.classList.remove('green');
             pixel.classList.remove('red');
         });
     }
 
-    // Show the initial popup when the page loads
-    window.onload = function() {
+    window.onload = () => {
         openInitialPopup();
-    };
+    }
 </script>
 </body>
 </html>
