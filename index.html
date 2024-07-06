@@ -369,8 +369,23 @@
         treeInfo.innerText = `PICKED DECISION TREE FOR DIGIT: ${treeNumber}`;
         logMessage(`Selected Tree: ${currentTree}`);
         
-        // Load the tree JSON file
-        fetch(`mnist_d${currentTree}_n500_0.json`)
+        // Load the tree JSON file from GitHub Gist
+        const gistUrls = {
+            0: 'https://gist.githubusercontent.com/bunidin/06f95395bdf07055dc594cbc89961686/raw/mnist_d0_n500_0.json',
+            1: 'https://gist.githubusercontent.com/bunidin/4a8f8098f6d403599f5dc29118022b59/raw/mnist_d1_n500_0.json',
+            2: 'https://gist.githubusercontent.com/bunidin/c0b4a3d37062cfceb0cb15681d6eada8/raw/mnist_d2_n500_0.json',
+            3: 'https://gist.githubusercontent.com/bunidin/cf2c6e07165f23a6cb7d4efd4ff3bfbe/raw/mnist_d3_n500_0.json',
+            4: 'https://gist.githubusercontent.com/bunidin/3f69fa951dfa14ed34498b93373da925/raw/mnist_d4_n500_0.json',
+            5: 'https://gist.githubusercontent.com/bunidin/71e7100ec85abcca614e538ec63b1a09/raw/mnist_d5_n500_0.json',
+            6: 'https://gist.githubusercontent.com/bunidin/8eaf2d4fea062f782e4d00f1c06cd1e0/raw/mnist_d6_n500_0.json',
+            7: 'https://gist.githubusercontent.com/bunidin/89c8b96a80797432b60351fdabf56ea2/raw/mnist_d7_n500_0.json',
+            8: 'https://gist.githubusercontent.com/bunidin/8f91b8e2325158d598f0f60f61ca9a5b/raw/mnist_d8_n500_0.json',
+            9: 'https://gist.githubusercontent.com/bunidin/c4e6f09ca1767422d4379c6150ef5166/raw/mnist_d9_n500_0.json'
+        };
+
+        const url = gistUrls[currentTree];
+
+        fetch(url)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
