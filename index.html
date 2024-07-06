@@ -239,6 +239,34 @@
             margin: 20px 0;
             font-size: 36px; /* Increased font size */
         }
+        .initial-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px;
+            border: 2px solid #ff5722;
+            background-color: #444;
+            color: #fff;
+            width: 500px;
+            border-radius: 8px;
+            z-index: 1100;
+            text-align: center;
+        }
+        .initial-popup .close-btn, .initial-popup .got-it-btn {
+            background-color: #ff0000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 50%;
+        }
+        .initial-popup .got-it-btn {
+            background-color: #4CAF50;
+            border-radius: 8px;
+        }
     </style>
 </head>
 <body>
@@ -273,7 +301,7 @@
         <button class="info-btn" onclick="openInfoWindow()">?</button>
         <div class="evaluation-content">
             <div>
-                <h3>Current Drawing</h3>
+                <h3>Evaluation Menu</h3>
                 <div id="evaluationDrawing" class="evaluation-grid"></div>
                 <div id="evaluationResult" class="result-box" style="margin-top: 10px; text-align: center;"></div>
             </div>
@@ -296,6 +324,13 @@
             <p><strong>Red Pixels:</strong> Pixels that were not marked in the original drawing but are relevant.</p>
         </div>
     </div>
+    <div id="initialPopup" class="initial-popup">
+        <h3>Project Information</h3>
+        <p>This project is made to understand the concepts presented in my bachelor's thesis paper "On Interpreting ML Models using Symbolic Languages".</p>
+        <p>This is an alpha version and may contain bugs.</p>
+        <button class="close-btn" onclick="closeInitialPopup()">X</button>
+        <button class="got-it-btn" onclick="closeInitialPopup()">Got it!</button>
+    </div>
 </div>
 <div class="log-container" id="logContainer">
     <h3>Console Logs</h3>
@@ -314,6 +349,7 @@
     const logContainer = document.getElementById('logContainer');
     const logContent = document.getElementById('logContent');
     const infoWindow = document.getElementById('infoWindow');
+    const initialPopup = document.getElementById('initialPopup');
     let currentTree = -1;
     let isDrawing = false;
     let lastClassificationResult = '';
@@ -492,6 +528,14 @@
         infoWindow.style.display = 'none';
     }
 
+    function openInitialPopup() {
+        initialPopup.style.display = 'block';
+    }
+
+    function closeInitialPopup() {
+        initialPopup.style.display = 'none';
+    }
+
     function evaluateTree(tree, image) {
         let node = tree.nodes["0"];
         logMessage('Starting tree evaluation');
@@ -663,6 +707,11 @@
             pixel.classList.remove('red');
         });
     }
+
+    // Show the initial popup when the page loads
+    window.onload = function() {
+        openInitialPopup();
+    };
 </script>
 </body>
 </html>
