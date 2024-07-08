@@ -287,6 +287,24 @@
             visibility: visible;
             opacity: 1;
         }
+        .issues-box {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 360px;
+            height: 650px;
+            overflow-y: auto;
+            padding: 10px;
+            border: 2px solid #ff5722;
+            background-color: #444;
+            color: #fff;
+            z-index: 1000;
+            border-radius: 8px;
+        }
+        .issues-box h3 {
+            margin: 0;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -330,28 +348,51 @@
             </div>
             <div class="evaluation-controls">
                 <button onclick="minimumSR()">SR</button>
-                <button onclick="minimalRFS()">MinimalRFS</button>
+                <button onclick="showComingSoonPopup()">RFS</button>
                 <button onclick="minimumCR()">MinimumCR</button>
                 <button>Coming Soon</button>
             </div>
         </div>
     </div>
+    <div id="comingSoonPopup" class="info-window">
+     <button class="close-btn" onclick="closeComingSoonPopup()">X</button>
+     <div>
+        <h3>Coming Soon</h3>
+        <p>The RFS functionality is coming soon. Stay tuned!</p>
+     </div>
+    </div>
     <div id="infoWindow" class="info-window">
         <button class="close-btn" onclick="closeInfoWindow()">X</button>
         <div>
             <h3>Feature Explanation</h3>
-            <p><strong>SR:</strong> Finds a minimum subset of pixels which if fixed, ensures the same classification regardless of the rest.</p>
-            <p><strong>MinimalRFS:</strong> Highlights the relevant features (pixels) used by the decision tree to classify the current drawing.</p>
+            <p><strong>SR:</strong> Finds a subset of pixels which if fixed, ensures the same classification regardless of the rest.</p>
+            <p><strong>RFS:</strong> Highlights the relevant features (pixels) used by the decision tree to classify the current drawing.</p>
             <p><strong>MinimumCR:</strong> Finds the smallest number of pixels that need to be changed to flip the classification of the current drawing.</p>
             <p><strong>Green Pixels:</strong> Pixels that were marked in the original drawing and are relevant.</p>
             <p><strong>Red Pixels:</strong> Pixels that were not marked in the original drawing but are relevant.</p>
         </div>
     </div>
     <div id="initialPopup" class="initial-popup">
-        <h3>Project Information</h3>
-        <p>This project is made to understand the concepts presented in my bachelor's thesis paper "On Interpreting ML Models using Symbolic Languages".</p>
+        <h2>Project Information</h2>
+        <p>This project is made to understand the concepts presented in my bachelor's thesis "On Interpreting ML Models using Symbolic Languages".</p>
         <p>This is an alpha version and may contain bugs.</p>
+        <p style="font-weight: bold; background-color: #000000; color: #FF0000;">This tool is by no means necessary to understand the bachelor thesis. It is just an additional tool to deepen your understanding of some concepts.</p>
         <button class="got-it-btn" onclick="closeInitialPopup()">Got it!</button>
+    </div>
+    <div id="issuesBox" class="issues-box">
+	<h3>TUTORIAL</h3>
+        <p>1) Pick a binary decision tree (Tree 0, ..., Tree 9).</p>
+        <p>2) Draw an instance (that would be e.g. a digit).</p>
+	<p>3) Click on Classify! to see how nice you can draw digits ;).</p>
+	<p>4) Click on Open Evaluation Menu and try understanding the decision tree.</p>
+        <p>____________________________________________</p>
+        <h3>KNOWN ISSUES</h3>
+	<p style="color: red;">You may need to zoom out.</p>
+	<p style="color: red;">The decision trees were trained on thousands of instances, which is still not enough. So you may be drawing digits perfectly but the trees still may not recognize them. Try to understand why using the Evalutation Menu!</p>
+        <p>Long Runtime for MinimumCR (Best measured case: 112ms, Worst measured case: 2 minutes).</p>
+        <p>Long Runtime for SR for some instances (Average case: 62ms, Worst measured case: 91 seconds).</p>
+	<p>We disabled the RFS feature, because we encountered a few issues. This feature will come back soon.</p>
+	<p style="color: yellow;">Coming soon: MaximumCA in the Evaluation Menu!</p>
     </div>
 </div>
 <div class="log-container" id="logContainer">
@@ -509,7 +550,7 @@
         logMessage(`Average time taken for classification: ${averageTime.toFixed(2)} ms`, true);
 
         const confidenceLevel = calculateConfidenceLevel(currentTreeData, result);
-        logMessage(`Confidence Level: ${confidenceLevel}`, true);
+        //logMessage(`Confidence Level: ${confidenceLevel}`, true);
     }
 
     function getBinaryImage() {
@@ -628,53 +669,72 @@
             return;
         }
 
-        logMessage('Starting minimumSR computation');
+        logMessage('Starting SR computation');
         const binaryImage = getBinaryImage();
         const startTime = performance.now();
-        const minimumSRFeatures = findMinimumSRFeatures(currentTreeData, binaryImage);
+        const relevantFeatures = findRelevantFeatures(currentTreeData, binaryImage);
+        const srFeatures = findSRFeatures(currentTreeData, binaryImage, relevantFeatures);
         const endTime = performance.now();
         const timeTaken = endTime - startTime;
-        logMessage(`Minimum SR Features: ${minimumSRFeatures}`);
-        highlightRelevantFeatures(minimumSRFeatures, binaryImage);
-        logMessage('Completed minimumSR computation');
+
+        logMessage(`SR Features: ${srFeatures}`);
+        highlightRelevantFeatures(srFeatures, binaryImage);
+        logMessage('Completed SR computation');
         logMessage(`Time taken for SR computation: ${timeTaken.toFixed(2)} ms`, true);
     }
 
-    function findMinimumSRFeatures(tree, image) {
-        const originalResult = evaluateTree(tree, image);
-        const relevantFeatures = findRelevantFeatures(tree, image);
-        const minimumSRFeatures = [];
+    function findSRFeatures(tree, image, relevantFeatures) {
+    const originalResult = evaluateTree(tree, image);
 
-        for (let i = 0; i < relevantFeatures.length; i++) {
-            const testImage = [...image];
-            testImage[relevantFeatures[i]] = 1 - testImage[relevantFeatures[i]]; // Flip the pixel
-            const newResult = evaluateTree(tree, testImage);
-            if (newResult === originalResult) {
-                minimumSRFeatures.push(relevantFeatures[i]);
-            }
-        }
+    // Track fixed features for green and red pixels
+    let fixedGreen = [];
+    let fixedRed = [];
 
-        const finalMinimumSRFeatures = minimumSRFeatures.filter(index => {
-            const testImage = [...image];
-            minimumSRFeatures.forEach(feature => {
-                if (feature !== index) {
-                    testImage[feature] = 1 - testImage[feature];
+    function findFeatures() {
+        for (const pixelIndex of relevantFeatures) {
+            const tempImage = [...image];
+            tempImage[pixelIndex] = image[pixelIndex] === 1 ? 0 : 1; // Flip the pixel
+
+            const newResult = evaluateTree(tree, tempImage);
+            if (newResult !== originalResult) {
+                if (image[pixelIndex] === 1) {
+                    fixedGreen.push(pixelIndex);
+                } else {
+                    fixedRed.push(pixelIndex);
                 }
-            });
-            const result = evaluateTree(tree, testImage);
-            return result === originalResult;
-        });
-
-        // Ensure at least one green pixel for negative instances
-        if (originalResult.startsWith('not')) {
-            const greenPixel = relevantFeatures.find(index => image[index] === 1);
-            if (greenPixel !== undefined && !finalMinimumSRFeatures.includes(greenPixel)) {
-                finalMinimumSRFeatures.push(greenPixel);
             }
         }
-
-        return finalMinimumSRFeatures;
     }
+
+    // First attempt with the given relevant features
+    findFeatures();
+
+    // If no features were found, expand the search
+    if (fixedGreen.length === 0 && fixedRed.length === 0) {
+        console.log('No relevant features found, expanding search.');
+        // Generate additional pixel indices (e.g., all possible pixels)
+        relevantFeatures = Array.from({ length: image.length }, (_, i) => i);
+        findFeatures();
+    }
+
+    // Ensure at least one green and one red pixel is highlighted
+    if (fixedGreen.length === 0 || fixedRed.length === 0) {
+        for (let i = 0; i < image.length; i++) {
+            if (fixedGreen.length === 0 && image[i] === 1) {
+                fixedGreen.push(i);
+            }
+            if (fixedRed.length === 0 && image[i] === 0) {
+                fixedRed.push(i);
+            }
+            if (fixedGreen.length > 0 && fixedRed.length > 0) {
+                break;
+            }
+        }
+    }
+
+    return [...fixedGreen, ...fixedRed];
+}
+
 
     async function minimalRFS() {
         clearHighlights();
@@ -683,7 +743,7 @@
             return;
         }
 
-        logMessage('Starting minimalRFS computation');
+        logMessage('Starting RFS computation');
         const binaryImage = getBinaryImage();
         const startTime = performance.now();
         const relevantFeatures = findRelevantFeatures(currentTreeData, binaryImage);
@@ -691,7 +751,7 @@
         const timeTaken = endTime - startTime;
         logMessage('Relevant Features: ' + relevantFeatures);
         highlightRelevantFeatures(relevantFeatures, binaryImage);
-        logMessage('Completed minimalRFS computation');
+        logMessage('Completed RFS computation');
         logMessage(`Time taken for RFS computation: ${timeTaken.toFixed(2)} ms`, true);
     }
 
@@ -787,6 +847,13 @@
         });
     }
 
+   function showComingSoonPopup() {
+    document.getElementById('comingSoonPopup').style.display = 'block';
+   }
+
+   function closeComingSoonPopup() {
+    document.getElementById('comingSoonPopup').style.display = 'none';
+   }
     window.onload = () => {
         openInitialPopup();
     }
