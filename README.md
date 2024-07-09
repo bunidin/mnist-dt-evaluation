@@ -5,9 +5,7 @@ This project is made to understand the concepts presented in my bachelor's thesi
 
 This is an alpha version and may contain bugs.
 
-```diff
-- This tool is by no means necessary to understand the bachelor thesis. It is just an additional tool to deepen your understanding of some concepts.
-```
+<span style="color:red; font-weight:bold;">This tool is by no means necessary to understand the bachelor thesis. It is just an additional tool to deepen your understanding of some concepts.</span>
 
 ## TUTORIAL
 1. Pick a binary decision tree (Tree 0, ..., Tree 9).
