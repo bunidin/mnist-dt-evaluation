@@ -1,5 +1,5 @@
 # Interactive Decision Tree Evaluation over MNIST Dataset
-You can access the project using this [link](https://bunidin.github.io/mnist-dt-evaluation/).
+You can explore and interact with the project on the website available at [this link](https://bunidin.github.io/mnist-dt-evaluation/). This Git repository contains the implementation details and source code.
 
 ## Project Information
 This project is made to understand the concepts presented in my bachelor's thesis "On Interpreting ML Models using Symbolic Languages".
